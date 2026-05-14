@@ -1,5 +1,6 @@
 # =========================================================
 # AI SAHAM INDONESIA ULTRA PRO MAX
+# FIXED & UPDATED VERSION
 # REALTIME + MOBILE + TELEGRAM BOT
 # =========================================================
 
@@ -14,7 +15,7 @@ from sklearn.linear_model import LinearRegression
 from streamlit_autorefresh import st_autorefresh
 
 # =========================================================
-# AUTO REFRESH REALTIME
+# AUTO REFRESH
 # =========================================================
 
 st_autorefresh(
@@ -33,7 +34,7 @@ st.set_page_config(
 )
 
 # =========================================================
-# MOBILE RESPONSIVE CSS
+# DARK MODE + MOBILE RESPONSIVE
 # =========================================================
 
 st.markdown(
@@ -41,7 +42,7 @@ st.markdown(
     <style>
 
     .stApp{
-        background:#0d1117;
+        background-color:#0d1117;
         color:white;
     }
 
@@ -52,7 +53,6 @@ st.markdown(
         border-radius:15px;
     }
 
-    /* MOBILE */
     @media (max-width: 768px){
 
         .block-container{
@@ -68,7 +68,6 @@ st.markdown(
         h2{
             font-size:22px !important;
         }
-
     }
 
     </style>
@@ -105,7 +104,7 @@ auto_telegram = st.sidebar.toggle(
 # =========================================================
 
 stock = st.text_input(
-    "Kode Saham",
+    "Kode Saham Utama",
     "BBCA"
 )
 
@@ -126,7 +125,6 @@ compare_list = [
 # =========================================================
 
 TELEGRAM_TOKEN = "ISI_TOKEN_BOT"
-
 TELEGRAM_CHAT_ID = "ISI_CHAT_ID"
 
 # =========================================================
@@ -144,6 +142,10 @@ def load_data(code, interval):
         progress=False
     )
 
+    if data.empty:
+        return data
+
+    # FIX MULTI INDEX
     if isinstance(data.columns, pd.MultiIndex):
         data.columns = data.columns.get_level_values(0)
 
@@ -155,17 +157,26 @@ def load_data(code, interval):
 
 def send_telegram(message):
 
-    url = (
-        f"https://api.telegram.org/bot"
-        f"{TELEGRAM_TOKEN}/sendMessage"
-    )
+    try:
 
-    payload = {
-        "chat_id": TELEGRAM_CHAT_ID,
-        "text": message
-    }
+        url = (
+            f"https://api.telegram.org/bot"
+            f"{TELEGRAM_TOKEN}/sendMessage"
+        )
 
-    requests.post(url, data=payload)
+        payload = {
+            "chat_id": TELEGRAM_CHAT_ID,
+            "text": message
+        }
+
+        requests.post(
+            url,
+            data=payload,
+            timeout=10
+        )
+
+    except:
+        pass
 
 # =========================================================
 # MAIN
@@ -174,10 +185,13 @@ def send_telegram(message):
 try:
 
     # =========================================================
-    # GET DATA
+    # LOAD STOCK DATA
     # =========================================================
 
-    df = load_data(stock_code, timeframe)
+    df = load_data(
+        stock_code,
+        timeframe
+    )
 
     if df.empty:
         st.error("Data saham tidak ditemukan")
@@ -187,7 +201,7 @@ try:
     # CLEAN DATA
     # =========================================================
 
-    cols = [
+    numeric_cols = [
         "Open",
         "High",
         "Low",
@@ -195,7 +209,7 @@ try:
         "Volume"
     ]
 
-    for col in cols:
+    for col in numeric_cols:
 
         df[col] = pd.to_numeric(
             df[col],
@@ -208,9 +222,17 @@ try:
     # MOVING AVERAGE
     # =========================================================
 
-    df["MA20"] = df["Close"].rolling(20).mean()
+    df["MA20"] = (
+        df["Close"]
+        .rolling(20)
+        .mean()
+    )
 
-    df["MA50"] = df["Close"].rolling(50).mean()
+    df["MA50"] = (
+        df["Close"]
+        .rolling(50)
+        .mean()
+    )
 
     # =========================================================
     # RSI
@@ -218,9 +240,15 @@ try:
 
     delta = df["Close"].diff()
 
-    gain = delta.where(delta > 0, 0)
+    gain = delta.where(
+        delta > 0,
+        0
+    )
 
-    loss = -delta.where(delta < 0, 0)
+    loss = -delta.where(
+        delta < 0,
+        0
+    )
 
     avg_gain = gain.rolling(14).mean()
 
@@ -228,23 +256,37 @@ try:
 
     rs = avg_gain / avg_loss
 
-    df["RSI"] = 100 - (100 / (1 + rs))
+    df["RSI"] = (
+        100 - (100 / (1 + rs))
+    )
 
     # =========================================================
     # SUPPORT RESISTANCE
     # =========================================================
 
-    df["Support"] = df["Low"].rolling(20).min()
+    df["Support"] = (
+        df["Low"]
+        .rolling(20)
+        .min()
+    )
 
-    df["Resistance"] = df["High"].rolling(20).max()
+    df["Resistance"] = (
+        df["High"]
+        .rolling(20)
+        .max()
+    )
 
     # =========================================================
-    # TRENDLINE
+    # AI TRENDLINE
     # =========================================================
 
     x = np.arange(len(df))
 
-    z = np.polyfit(x, df["Close"], 1)
+    z = np.polyfit(
+        x,
+        df["Close"],
+        1
+    )
 
     trendline = np.poly1d(z)(x)
 
@@ -254,11 +296,16 @@ try:
 
     ml_df = df.copy()
 
-    ml_df["Target"] = ml_df["Close"].shift(-1)
+    ml_df["Target"] = (
+        ml_df["Close"]
+        .shift(-1)
+    )
 
     ml_df = ml_df.dropna()
 
-    X = np.array(range(len(ml_df))).reshape(-1, 1)
+    X = np.array(
+        range(len(ml_df))
+    ).reshape(-1, 1)
 
     y = ml_df["Target"].values
 
@@ -274,9 +321,13 @@ try:
     # LAST DATA
     # =========================================================
 
-    last_price = float(df["Close"].iloc[-1])
+    last_price = float(
+        df["Close"].iloc[-1]
+    )
 
-    rsi = float(df["RSI"].iloc[-1])
+    rsi = float(
+        df["RSI"].iloc[-1]
+    )
 
     # =========================================================
     # SIGNAL
@@ -295,16 +346,172 @@ try:
         signal = "HOLD ⏳"
 
     # =========================================================
-    # TELEGRAM SIGNAL
+    # BUY SELL SIGNAL
+    # =========================================================
+
+    df["Buy_Signal"] = np.where(
+        df["MA20"] > df["MA50"],
+        df["Low"] * 0.995,
+        np.nan
+    )
+
+    df["Sell_Signal"] = np.where(
+        df["MA20"] < df["MA50"],
+        df["High"] * 1.005,
+        np.nan
+    )
+
+    # =========================================================
+    # BOS / CHOCH
+    # =========================================================
+
+    swing_high = (
+        df["High"]
+        .rolling(5)
+        .max()
+    )
+
+    swing_low = (
+        df["Low"]
+        .rolling(5)
+        .min()
+    )
+
+    df["BOS_UP"] = np.where(
+        df["Close"] > swing_high.shift(1),
+        df["High"] * 1.01,
+        np.nan
+    )
+
+    df["BOS_DOWN"] = np.where(
+        df["Close"] < swing_low.shift(1),
+        df["Low"] * 0.99,
+        np.nan
+    )
+
+    # =========================================================
+    # FIBONACCI
+    # =========================================================
+
+    high_price = df["High"].max()
+    low_price = df["Low"].min()
+
+    diff = high_price - low_price
+
+    fib_236 = high_price - diff * 0.236
+    fib_382 = high_price - diff * 0.382
+    fib_500 = high_price - diff * 0.500
+    fib_618 = high_price - diff * 0.618
+
+    # =========================================================
+    # PROFIT ANALYSIS
+    # =========================================================
+
+    take_profit = last_price * 1.03
+    cut_loss = last_price * 0.97
+
+    estimated_profit = (
+        (
+            prediction - last_price
+        ) / last_price
+    ) * 100
+
+    risk = last_price - cut_loss
+    reward = take_profit - last_price
+
+    if risk != 0:
+        risk_reward = reward / risk
+    else:
+        risk_reward = 0
+
+    # =========================================================
+    # SMART MONEY
+    # =========================================================
+
+    avg_volume = (
+        df["Volume"]
+        .rolling(20)
+        .mean()
+        .iloc[-1]
+    )
+
+    current_volume = (
+        df["Volume"]
+        .iloc[-1]
+    )
+
+    smart_money = "NEUTRAL"
+
+    if (
+        current_volume > avg_volume * 1.5
+        and df["Close"].iloc[-1]
+        > df["Open"].iloc[-1]
+    ):
+
+        smart_money = "ACCUMULATION 🟢"
+
+    elif (
+        current_volume > avg_volume * 1.5
+        and df["Close"].iloc[-1]
+        < df["Open"].iloc[-1]
+    ):
+
+        smart_money = "DISTRIBUTION 🔴"
+
+    # =========================================================
+    # AI PROBABILITY
+    # =========================================================
+
+    bullish_score = 0
+    bearish_score = 0
+
+    if df["MA20"].iloc[-1] > df["MA50"].iloc[-1]:
+        bullish_score += 1
+    else:
+        bearish_score += 1
+
+    if rsi < 30:
+        bullish_score += 1
+
+    elif rsi > 70:
+        bearish_score += 1
+
+    if prediction > last_price:
+        bullish_score += 1
+    else:
+        bearish_score += 1
+
+    if current_volume > avg_volume:
+        bullish_score += 1
+
+    total_score = bullish_score + bearish_score
+
+    if total_score != 0:
+
+        bullish_probability = (
+            bullish_score / total_score
+        ) * 100
+
+        bearish_probability = (
+            bearish_score / total_score
+        ) * 100
+
+    else:
+
+        bullish_probability = 0
+        bearish_probability = 0
+
+    # =========================================================
+    # TELEGRAM BOT
     # =========================================================
 
     if auto_telegram:
 
         telegram_message = f"""
-
 📈 AI SAHAM INDONESIA
 
-Saham: {stock.upper()}
+Saham:
+{stock.upper()}
 
 Harga:
 Rp {last_price:,.0f}
@@ -315,14 +522,20 @@ Rp {prediction:,.0f}
 Signal:
 {signal}
 
+Bullish Probability:
+{bullish_probability:.2f}%
+
 RSI:
 {rsi:.2f}
+"""
 
-        """
+        send_telegram(
+            telegram_message
+        )
 
-        send_telegram(telegram_message)
-
-        st.success("Telegram signal terkirim")
+        st.success(
+            "Telegram signal terkirim"
+        )
 
     # =========================================================
     # METRICS
@@ -351,11 +564,21 @@ RSI:
     )
 
     # =========================================================
-    # REALTIME STATUS
+    # AI DASHBOARD
     # =========================================================
 
-    st.success(
-        "🟢 Realtime AI Dashboard Active"
+    st.markdown(
+        f"""
+### 🤖 AI Market Intelligence
+
+- Smart Money: **{smart_money}**
+- Bullish Probability: **{bullish_probability:.2f}%**
+- Bearish Probability: **{bearish_probability:.2f}%**
+- Estimasi Profit: **{estimated_profit:.2f}%**
+- Take Profit: **Rp {take_profit:,.0f}**
+- Cut Loss: **Rp {cut_loss:,.0f}**
+- Risk Reward: **1 : {risk_reward:.2f}**
+"""
     )
 
     # =========================================================
@@ -364,7 +587,7 @@ RSI:
 
     fig = go.Figure()
 
-    # CANDLE
+    # CANDLESTICK
     fig.add_trace(
         go.Candlestick(
             x=df.index,
@@ -426,6 +649,62 @@ RSI:
         )
     )
 
+    # BUY SIGNAL
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df["Buy_Signal"],
+            mode="markers",
+            name="BUY",
+            marker=dict(
+                symbol="triangle-up",
+                size=10
+            )
+        )
+    )
+
+    # SELL SIGNAL
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df["Sell_Signal"],
+            mode="markers",
+            name="SELL",
+            marker=dict(
+                symbol="triangle-down",
+                size=10
+            )
+        )
+    )
+
+    # BOS UP
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df["BOS_UP"],
+            mode="markers",
+            name="BOS UP",
+            marker=dict(
+                symbol="star",
+                size=10
+            )
+        )
+    )
+
+    # BOS DOWN
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df["BOS_DOWN"],
+            mode="markers",
+            name="BOS DOWN",
+            marker=dict(
+                symbol="x",
+                size=10
+            )
+        )
+    )
+
     # VOLUME
     fig.add_trace(
         go.Bar(
@@ -437,15 +716,21 @@ RSI:
         )
     )
 
+    # FIBONACCI
+    fig.add_hline(y=fib_236)
+    fig.add_hline(y=fib_382)
+    fig.add_hline(y=fib_500)
+    fig.add_hline(y=fib_618)
+
     # =========================================================
     # CHART LAYOUT
     # =========================================================
 
     fig.update_layout(
         template="plotly_dark",
-        height=850,
+        height=900,
 
-        title=f"{stock.upper()} AI Live Chart",
+        title=f"{stock.upper()} AI Smart Money Chart",
 
         xaxis=dict(
             rangeslider=dict(
@@ -495,7 +780,13 @@ RSI:
 
         try:
 
-            comp_df = load_data(comp, "1d")
+            comp_df = load_data(
+                comp,
+                "1d"
+            )
+
+            if comp_df.empty:
+                continue
 
             comp_df["Close"] = pd.to_numeric(
                 comp_df["Close"],
@@ -528,7 +819,7 @@ RSI:
     )
 
     # =========================================================
-    # DATA TABLE
+    # REALTIME TABLE
     # =========================================================
 
     st.subheader("Realtime Data")
