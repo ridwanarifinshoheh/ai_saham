@@ -161,11 +161,11 @@ def send_telegram(message):
 
         url = (
             f"https://api.telegram.org/bot"
-            f"{TELEGRAM_TOKEN}/sendMessage"
+            f"{8642563981:AAEUpgQE1j7BLUV-SUr-k3URCyGPLIPHZu4}/sendMessage"
         )
 
         payload = {
-            "chat_id": TELEGRAM_CHAT_ID,
+            "chat_id": "6611269554",
             "text": message
         }
 
