@@ -1,3 +1,8 @@
+# =====================================================
+# AI SAHAM INDONESIA ULTRA PRO
+# FULL FIX VERSION
+# =====================================================
+
 import streamlit as st
 import yfinance as yf
 import pandas as pd
@@ -7,24 +12,27 @@ import plotly.graph_objects as go
 from sklearn.linear_model import LinearRegression
 from streamlit_autorefresh import st_autorefresh
 
-# ======================================================
+# =====================================================
 # AUTO REFRESH
-# ======================================================
+# =====================================================
 
-st_autorefresh(interval=10000, key="refresh")
+st_autorefresh(
+    interval=10000,
+    key="refresh"
+)
 
-# ======================================================
+# =====================================================
 # PAGE CONFIG
-# ======================================================
+# =====================================================
 
 st.set_page_config(
-    page_title="AI Saham Indonesia PRO",
+    page_title="AI Saham Indonesia ULTRA PRO",
     layout="wide"
 )
 
-# ======================================================
-# PREMIUM DARK MODE
-# ======================================================
+# =====================================================
+# DARK MODE
+# =====================================================
 
 st.markdown(
     """
@@ -36,7 +44,7 @@ st.markdown(
     }
 
     div[data-testid="metric-container"]{
-        background-color:#161b22;
+        background:#161b22;
         border:1px solid #30363d;
         padding:15px;
         border-radius:15px;
@@ -47,16 +55,26 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# ======================================================
+# =====================================================
 # TITLE
-# ======================================================
+# =====================================================
 
-st.title("📈 AI Saham Indonesia PRO")
-st.caption("Live Smart Money Trading Dashboard")
+st.title("📈 AI Saham Indonesia ULTRA PRO")
+st.caption("Live Smart Money AI Dashboard")
 
-# ======================================================
+# =====================================================
+# SIDEBAR
+# =====================================================
+
+timeframe = st.sidebar.selectbox(
+    "Timeframe",
+    ["15m", "1h", "1d"],
+    index=1
+)
+
+# =====================================================
 # INPUT
-# ======================================================
+# =====================================================
 
 stock = st.text_input(
     "Kode Saham Utama",
@@ -64,7 +82,7 @@ stock = st.text_input(
 )
 
 compare_stocks = st.text_input(
-    "Compare Saham (pisahkan koma)",
+    "Compare Saham",
     "BBRI,TLKM"
 )
 
@@ -75,18 +93,19 @@ compare_list = [
     for s in compare_stocks.split(",")
 ]
 
-# ======================================================
+# =====================================================
 # LOAD DATA
-# ======================================================
+# =====================================================
 
 @st.cache_data(ttl=10)
-def load_data(code):
+def load_data(code, interval):
 
     data = yf.download(
         code,
         period="3mo",
-        interval="1h",
-        auto_adjust=True
+        interval=interval,
+        auto_adjust=True,
+        progress=False
     )
 
     if isinstance(data.columns, pd.MultiIndex):
@@ -102,7 +121,8 @@ def load_compare_data(code):
         code,
         period="3mo",
         interval="1d",
-        auto_adjust=True
+        auto_adjust=True,
+        progress=False
     )
 
     if isinstance(data.columns, pd.MultiIndex):
@@ -110,23 +130,35 @@ def load_compare_data(code):
 
     return data
 
-# ======================================================
+# =====================================================
 # MAIN
-# ======================================================
+# =====================================================
 
 try:
 
-    df = load_data(stock_code)
+    # =====================================================
+    # GET DATA
+    # =====================================================
+
+    df = load_data(stock_code, timeframe)
 
     if df.empty:
         st.error("Data saham tidak ditemukan")
         st.stop()
 
-    # ======================================================
+    # =====================================================
     # CLEAN DATA
-    # ======================================================
+    # =====================================================
 
-    for col in ["Open", "High", "Low", "Close", "Volume"]:
+    numeric_cols = [
+        "Open",
+        "High",
+        "Low",
+        "Close",
+        "Volume"
+    ]
+
+    for col in numeric_cols:
 
         df[col] = pd.to_numeric(
             df[col],
@@ -135,17 +167,17 @@ try:
 
     df = df.dropna()
 
-    # ======================================================
+    # =====================================================
     # MOVING AVERAGE
-    # ======================================================
+    # =====================================================
 
     df["MA20"] = df["Close"].rolling(20).mean()
 
     df["MA50"] = df["Close"].rolling(50).mean()
 
-    # ======================================================
+    # =====================================================
     # RSI
-    # ======================================================
+    # =====================================================
 
     delta = df["Close"].diff()
 
@@ -161,17 +193,17 @@ try:
 
     df["RSI"] = 100 - (100 / (1 + rs))
 
-    # ======================================================
-    # SUPPORT & RESISTANCE
-    # ======================================================
+    # =====================================================
+    # SUPPORT RESISTANCE
+    # =====================================================
 
     df["Support"] = df["Low"].rolling(20).min()
 
     df["Resistance"] = df["High"].rolling(20).max()
 
-    # ======================================================
-    # AI TRENDLINE
-    # ======================================================
+    # =====================================================
+    # TRENDLINE AI
+    # =====================================================
 
     x = np.arange(len(df))
 
@@ -179,9 +211,9 @@ try:
 
     trendline = np.poly1d(z)(x)
 
-    # ======================================================
-    # MACHINE LEARNING
-    # ======================================================
+    # =====================================================
+    # MACHINE LEARNING PREDICTION
+    # =====================================================
 
     ml_df = df.copy()
 
@@ -201,36 +233,33 @@ try:
         np.array([[len(ml_df) + 1]])
     )[0]
 
-    # ======================================================
+    # =====================================================
     # LAST DATA
-    # ======================================================
+    # =====================================================
 
     last_price = float(df["Close"].iloc[-1])
 
     rsi = float(df["RSI"].iloc[-1])
 
-    # ======================================================
+    # =====================================================
     # SIGNAL
-    # ======================================================
+    # =====================================================
 
     if prediction > last_price and rsi < 70:
 
         signal = "BUY 🚀"
-        signal_color = "lime"
 
     elif prediction < last_price and rsi > 30:
 
         signal = "SELL 🔻"
-        signal_color = "red"
 
     else:
 
         signal = "HOLD ⏳"
-        signal_color = "orange"
 
-    # ======================================================
-    # BUY SELL SIGNAL
-    # ======================================================
+    # =====================================================
+    # BUY SELL MARKER
+    # =====================================================
 
     df["Buy_Signal"] = np.where(
         df["MA20"] > df["MA50"],
@@ -244,9 +273,153 @@ try:
         np.nan
     )
 
-    # ======================================================
+    # =====================================================
+    # BOS / CHOCH
+    # =====================================================
+
+    swing_high = df["High"].rolling(5).max()
+
+    swing_low = df["Low"].rolling(5).min()
+
+    df["BOS_UP"] = np.where(
+        df["Close"] > swing_high.shift(1),
+        df["High"] * 1.01,
+        np.nan
+    )
+
+    df["BOS_DOWN"] = np.where(
+        df["Close"] < swing_low.shift(1),
+        df["Low"] * 0.99,
+        np.nan
+    )
+
+    # =====================================================
+    # FIBONACCI
+    # =====================================================
+
+    high_price = df["High"].max()
+
+    low_price = df["Low"].min()
+
+    diff = high_price - low_price
+
+    fib_236 = high_price - diff * 0.236
+
+    fib_382 = high_price - diff * 0.382
+
+    fib_500 = high_price - diff * 0.5
+
+    fib_618 = high_price - diff * 0.618
+
+    # =====================================================
+    # PREDIKSI CLOSING
+    # =====================================================
+
+    today_open = float(df["Open"].iloc[-1])
+
+    today_high = float(df["High"].iloc[-1])
+
+    today_low = float(df["Low"].iloc[-1])
+
+    predicted_close = (
+        today_open
+        + today_high
+        + today_low
+        + prediction
+    ) / 4
+
+    change_percent = (
+        (
+            predicted_close - last_price
+        ) / last_price
+    ) * 100
+
+    # =====================================================
+    # SMART MONEY
+    # =====================================================
+
+    avg_volume = df["Volume"].rolling(20).mean().iloc[-1]
+
+    current_volume = df["Volume"].iloc[-1]
+
+    smart_money = "NEUTRAL"
+
+    if (
+        current_volume > avg_volume * 1.5
+        and df["Close"].iloc[-1]
+        > df["Open"].iloc[-1]
+    ):
+
+        smart_money = "ACCUMULATION 🟢"
+
+    elif (
+        current_volume > avg_volume * 1.5
+        and df["Close"].iloc[-1]
+        < df["Open"].iloc[-1]
+    ):
+
+        smart_money = "DISTRIBUTION 🔴"
+
+    # =====================================================
+    # PROFIT ANALYSIS
+    # =====================================================
+
+    take_profit = last_price * 1.03
+
+    cut_loss = last_price * 0.97
+
+    estimated_profit = (
+        (
+            prediction - last_price
+        ) / last_price
+    ) * 100
+
+    risk = last_price - cut_loss
+
+    reward = take_profit - last_price
+
+    risk_reward = reward / risk
+
+    # =====================================================
+    # AI SCORE
+    # =====================================================
+
+    bullish_score = 0
+
+    bearish_score = 0
+
+    if df["MA20"].iloc[-1] > df["MA50"].iloc[-1]:
+        bullish_score += 1
+    else:
+        bearish_score += 1
+
+    if rsi < 30:
+        bullish_score += 1
+
+    elif rsi > 70:
+        bearish_score += 1
+
+    if prediction > last_price:
+        bullish_score += 1
+    else:
+        bearish_score += 1
+
+    if current_volume > avg_volume:
+        bullish_score += 1
+
+    total_score = bullish_score + bearish_score
+
+    bullish_probability = (
+        bullish_score / total_score
+    ) * 100
+
+    bearish_probability = (
+        bearish_score / total_score
+    ) * 100
+
+    # =====================================================
     # METRICS
-    # ======================================================
+    # =====================================================
 
     col1, col2, col3, col4 = st.columns(4)
 
@@ -270,18 +443,28 @@ try:
         signal
     )
 
+    # =====================================================
+    # DASHBOARD INFO
+    # =====================================================
+
     st.markdown(
         f"""
-        <h2 style='color:{signal_color};'>
-        {signal}
-        </h2>
-        """,
-        unsafe_allow_html=True
+        ### 🤖 AI Market Intelligence
+
+        - Smart Money: **{smart_money}**
+        - Bullish Probability: **{bullish_probability:.2f}%**
+        - Bearish Probability: **{bearish_probability:.2f}%**
+        - Prediksi Closing: **Rp {predicted_close:,.0f}**
+        - Potensi Profit: **{estimated_profit:.2f}%**
+        - Take Profit: **Rp {take_profit:,.0f}**
+        - Cut Loss: **Rp {cut_loss:,.0f}**
+        - Risk Reward: **1 : {risk_reward:.2f}**
+        """
     )
 
-    # ======================================================
+    # =====================================================
     # MAIN CHART
-    # ======================================================
+    # =====================================================
 
     fig = go.Figure()
 
@@ -323,8 +506,7 @@ try:
             x=df.index,
             y=df["Support"],
             mode="lines",
-            name="Support",
-            line=dict(dash="dot")
+            name="Support"
         )
     )
 
@@ -334,8 +516,7 @@ try:
             x=df.index,
             y=df["Resistance"],
             mode="lines",
-            name="Resistance",
-            line=dict(dash="dot")
+            name="Resistance"
         )
     )
 
@@ -377,6 +558,34 @@ try:
         )
     )
 
+    # BOS UP
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df["BOS_UP"],
+            mode="markers",
+            name="BOS UP",
+            marker=dict(
+                symbol="star",
+                size=10
+            )
+        )
+    )
+
+    # BOS DOWN
+    fig.add_trace(
+        go.Scatter(
+            x=df.index,
+            y=df["BOS_DOWN"],
+            mode="markers",
+            name="BOS DOWN",
+            marker=dict(
+                symbol="x",
+                size=10
+            )
+        )
+    )
+
     # VOLUME
     fig.add_trace(
         go.Bar(
@@ -384,18 +593,27 @@ try:
             y=df["Volume"],
             name="Volume",
             yaxis="y2",
-            opacity=0.25
+            opacity=0.2
         )
     )
 
-    # ======================================================
-    # LAYOUT
-    # ======================================================
+    # FIBONACCI
+    fig.add_hline(y=fib_236)
+
+    fig.add_hline(y=fib_382)
+
+    fig.add_hline(y=fib_500)
+
+    fig.add_hline(y=fib_618)
+
+    # =====================================================
+    # CHART LAYOUT
+    # =====================================================
 
     fig.update_layout(
         template="plotly_dark",
-        height=850,
-        title=f"{stock.upper()} Live AI Chart",
+        height=900,
+        title=f"{stock.upper()} AI Smart Money Chart",
 
         xaxis=dict(
             rangeslider=dict(
@@ -424,15 +642,14 @@ try:
         use_container_width=True
     )
 
-    # ======================================================
+    # =====================================================
     # COMPARE CHART
-    # ======================================================
+    # =====================================================
 
     st.subheader("📊 Compare Saham")
 
     compare_fig = go.Figure()
 
-    # MAIN STOCK
     compare_fig.add_trace(
         go.Scatter(
             x=df.index,
@@ -442,7 +659,6 @@ try:
         )
     )
 
-    # COMPARE STOCKS
     for comp in compare_list:
 
         try:
@@ -471,10 +687,7 @@ try:
     compare_fig.update_layout(
         template="plotly_dark",
         height=600,
-        title="Perbandingan Saham",
-        legend=dict(
-            orientation="h"
-        )
+        title="Perbandingan Saham"
     )
 
     st.plotly_chart(
@@ -482,9 +695,9 @@ try:
         use_container_width=True
     )
 
-    # ======================================================
+    # =====================================================
     # DATA TABLE
-    # ======================================================
+    # =====================================================
 
     st.subheader("Realtime Data")
 
@@ -492,16 +705,20 @@ try:
         df.tail(20)
     )
 
-    # ======================================================
+    # =====================================================
     # DISCLAIMER
-    # ======================================================
+    # =====================================================
 
     st.warning(
         "AI ini hanya untuk edukasi dan bukan financial advice."
     )
 
+# =====================================================
+# ERROR HANDLER
+# =====================================================
+
 except Exception as e:
 
     st.error(
-        f"Terjadi error: {e}"
+        f"Terjadi error: {str(e)}"
     )
