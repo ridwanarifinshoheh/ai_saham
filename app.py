@@ -124,8 +124,8 @@ compare_list = [
 # TELEGRAM CONFIG
 # =========================================================
 
-TELEGRAM_TOKEN = "ISI_TOKEN_BOT"
-TELEGRAM_CHAT_ID = "ISI_CHAT_ID"
+TELEGRAM_TOKEN = "8730186137:AAEmCEYMbjI7QF9XU9SXFvsU1BqVrvCUWIs"
+TELEGRAM_CHAT_ID = "6611269554"
 
 # =========================================================
 # LOAD DATA
@@ -161,11 +161,11 @@ def send_telegram(message):
 
         url = (
             f"https://api.telegram.org/bot"
-            f"{8642563981:AAEUpgQE1j7BLUV-SUr-k3URCyGPLIPHZu4}/sendMessage"
+            f"{TELEGRAM_TOKEN}/sendMessage"
         )
 
         payload = {
-            "chat_id": "6611269554",
+            "chat_id": TELEGRAM_CHAT_ID,
             "text": message
         }
 
