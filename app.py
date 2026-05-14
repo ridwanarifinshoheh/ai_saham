@@ -19,7 +19,7 @@ from streamlit_autorefresh import st_autorefresh
 # =========================================================
 
 st_autorefresh(
-    interval=5000,
+    interval=10000,
     key="refresh"
 )
 
