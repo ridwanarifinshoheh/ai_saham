@@ -146,8 +146,8 @@ compare_list = [
 # TELEGRAM CONFIG
 # =========================================================
 
-TELEGRAM_TOKEN = "ISI_TOKEN_BOT"
-TELEGRAM_CHAT_ID = "ISI_CHAT_ID"
+TELEGRAM_TOKEN = "8730186137:AAEmCEYMbjI7QF9XU9SXFvsU1BqVrvCUWIs"
+TELEGRAM_CHAT_ID = "6611269554"
 
 # =========================================================
 # LOAD DATA
