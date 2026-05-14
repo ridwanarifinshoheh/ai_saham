@@ -1,6 +1,6 @@
 # =========================================================
 # AI SAHAM INDONESIA ULTRA PRO MAX
-# FIXED & UPDATED VERSION
+# FINAL POWERFUL VERSION
 # REALTIME + MOBILE + TELEGRAM BOT
 # =========================================================
 
@@ -11,6 +11,7 @@ import numpy as np
 import plotly.graph_objects as go
 import requests
 
+from datetime import datetime
 from sklearn.linear_model import LinearRegression
 from streamlit_autorefresh import st_autorefresh
 
@@ -19,7 +20,7 @@ from streamlit_autorefresh import st_autorefresh
 # =========================================================
 
 st_autorefresh(
-    interval=10000,
+    interval=5000,
     key="refresh"
 )
 
@@ -83,6 +84,20 @@ st.title("📈 AI Saham Indonesia MAX")
 st.caption("Realtime Smart Money AI Dashboard")
 
 # =========================================================
+# MARKET STATUS
+# =========================================================
+
+current_hour = datetime.now().hour
+
+if 9 <= current_hour <= 16:
+
+    st.success("🟢 Market Open")
+
+else:
+
+    st.warning("🔴 Market Closed")
+
+# =========================================================
 # SIDEBAR
 # =========================================================
 
@@ -90,8 +105,15 @@ st.sidebar.title("⚙️ Settings")
 
 timeframe = st.sidebar.selectbox(
     "Timeframe",
-    ["15m", "1h", "1d"],
-    index=1
+    [
+        "1m",
+        "5m",
+        "15m",
+        "30m",
+        "1h",
+        "1d"
+    ],
+    index=4
 )
 
 auto_telegram = st.sidebar.toggle(
@@ -124,8 +146,8 @@ compare_list = [
 # TELEGRAM CONFIG
 # =========================================================
 
-TELEGRAM_TOKEN = "8730186137:AAEmCEYMbjI7QF9XU9SXFvsU1BqVrvCUWIs"
-TELEGRAM_CHAT_ID = "6611269554"
+TELEGRAM_TOKEN = "ISI_TOKEN_BOT"
+TELEGRAM_CHAT_ID = "ISI_CHAT_ID"
 
 # =========================================================
 # LOAD DATA
@@ -134,9 +156,41 @@ TELEGRAM_CHAT_ID = "6611269554"
 @st.cache_data(ttl=10)
 def load_data(code, interval):
 
+    # ==========================================
+    # PERIOD SESUAI TIMEFRAME
+    # ==========================================
+
+    if interval == "1m":
+
+        period = "7d"
+
+    elif interval == "5m":
+
+        period = "30d"
+
+    elif interval == "15m":
+
+        period = "60d"
+
+    elif interval == "30m":
+
+        period = "60d"
+
+    elif interval == "1h":
+
+        period = "90d"
+
+    else:
+
+        period = "1y"
+
+    # ==========================================
+    # DOWNLOAD DATA
+    # ==========================================
+
     data = yf.download(
         code,
-        period="3mo",
+        period=period,
         interval=interval,
         auto_adjust=True,
         progress=False
@@ -145,9 +199,16 @@ def load_data(code, interval):
     if data.empty:
         return data
 
+    # ==========================================
     # FIX MULTI INDEX
+    # ==========================================
+
     if isinstance(data.columns, pd.MultiIndex):
-        data.columns = data.columns.get_level_values(0)
+
+        data.columns = (
+            data.columns
+            .get_level_values(0)
+        )
 
     return data
 
@@ -169,14 +230,17 @@ def send_telegram(message):
             "text": message
         }
 
-        requests.post(
+        response = requests.post(
             url,
             data=payload,
             timeout=10
         )
 
+        return response.status_code == 200
+
     except:
-        pass
+
+        return False
 
 # =========================================================
 # MAIN
@@ -185,7 +249,7 @@ def send_telegram(message):
 try:
 
     # =========================================================
-    # LOAD STOCK DATA
+    # LOAD DATA
     # =========================================================
 
     df = load_data(
@@ -194,6 +258,7 @@ try:
     )
 
     if df.empty:
+
         st.error("Data saham tidak ditemukan")
         st.stop()
 
@@ -277,7 +342,7 @@ try:
     )
 
     # =========================================================
-    # AI TRENDLINE
+    # TRENDLINE
     # =========================================================
 
     x = np.arange(len(df))
@@ -291,7 +356,7 @@ try:
     trendline = np.poly1d(z)(x)
 
     # =========================================================
-    # AI PREDICTION
+    # MACHINE LEARNING PREDICTION
     # =========================================================
 
     ml_df = df.copy()
@@ -394,6 +459,7 @@ try:
     # =========================================================
 
     high_price = df["High"].max()
+
     low_price = df["Low"].min()
 
     diff = high_price - low_price
@@ -408,6 +474,7 @@ try:
     # =========================================================
 
     take_profit = last_price * 1.03
+
     cut_loss = last_price * 0.97
 
     estimated_profit = (
@@ -417,11 +484,15 @@ try:
     ) * 100
 
     risk = last_price - cut_loss
+
     reward = take_profit - last_price
 
     if risk != 0:
+
         risk_reward = reward / risk
+
     else:
+
         risk_reward = 0
 
     # =========================================================
@@ -502,6 +573,27 @@ try:
         bearish_probability = 0
 
     # =========================================================
+    # AI CONFIDENCE
+    # =========================================================
+
+    confidence = abs(
+        bullish_probability
+        - bearish_probability
+    )
+
+    if confidence > 70:
+
+        confidence_label = "HIGH CONFIDENCE"
+
+    elif confidence > 55:
+
+        confidence_label = "MEDIUM CONFIDENCE"
+
+    else:
+
+        confidence_label = "LOW CONFIDENCE"
+
+    # =========================================================
     # TELEGRAM BOT
     # =========================================================
 
@@ -529,13 +621,29 @@ RSI:
 {rsi:.2f}
 """
 
-        send_telegram(
+        success = send_telegram(
             telegram_message
         )
 
-        st.success(
-            "Telegram signal terkirim"
-        )
+        if success:
+
+            st.success(
+                "Telegram signal terkirim"
+            )
+
+        else:
+
+            st.error(
+                "Telegram gagal terkirim"
+            )
+
+    # =========================================================
+    # LIVE STATUS
+    # =========================================================
+
+    st.success(
+        f"🟢 Live Realtime Active ({timeframe})"
+    )
 
     # =========================================================
     # METRICS
@@ -574,6 +682,7 @@ RSI:
 - Smart Money: **{smart_money}**
 - Bullish Probability: **{bullish_probability:.2f}%**
 - Bearish Probability: **{bearish_probability:.2f}%**
+- Confidence: **{confidence_label}**
 - Estimasi Profit: **{estimated_profit:.2f}%**
 - Take Profit: **Rp {take_profit:,.0f}**
 - Cut Loss: **Rp {cut_loss:,.0f}**
@@ -587,7 +696,6 @@ RSI:
 
     fig = go.Figure()
 
-    # CANDLESTICK
     fig.add_trace(
         go.Candlestick(
             x=df.index,
@@ -599,7 +707,6 @@ RSI:
         )
     )
 
-    # MA20
     fig.add_trace(
         go.Scatter(
             x=df.index,
@@ -609,7 +716,6 @@ RSI:
         )
     )
 
-    # MA50
     fig.add_trace(
         go.Scatter(
             x=df.index,
@@ -619,7 +725,6 @@ RSI:
         )
     )
 
-    # SUPPORT
     fig.add_trace(
         go.Scatter(
             x=df.index,
@@ -629,7 +734,6 @@ RSI:
         )
     )
 
-    # RESISTANCE
     fig.add_trace(
         go.Scatter(
             x=df.index,
@@ -639,7 +743,6 @@ RSI:
         )
     )
 
-    # TRENDLINE
     fig.add_trace(
         go.Scatter(
             x=df.index,
@@ -649,7 +752,6 @@ RSI:
         )
     )
 
-    # BUY SIGNAL
     fig.add_trace(
         go.Scatter(
             x=df.index,
@@ -663,7 +765,6 @@ RSI:
         )
     )
 
-    # SELL SIGNAL
     fig.add_trace(
         go.Scatter(
             x=df.index,
@@ -677,7 +778,6 @@ RSI:
         )
     )
 
-    # BOS UP
     fig.add_trace(
         go.Scatter(
             x=df.index,
@@ -691,7 +791,6 @@ RSI:
         )
     )
 
-    # BOS DOWN
     fig.add_trace(
         go.Scatter(
             x=df.index,
@@ -705,7 +804,6 @@ RSI:
         )
     )
 
-    # VOLUME
     fig.add_trace(
         go.Bar(
             x=df.index,
@@ -717,6 +815,7 @@ RSI:
     )
 
     # FIBONACCI
+
     fig.add_hline(y=fib_236)
     fig.add_hline(y=fib_382)
     fig.add_hline(y=fib_500)
@@ -782,7 +881,7 @@ RSI:
 
             comp_df = load_data(
                 comp,
-                "1d"
+                timeframe
             )
 
             if comp_df.empty:
