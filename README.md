@@ -11,6 +11,7 @@ AI trading dashboard saham Indonesia berbasis Python + Streamlit.
 - Compare Saham
 - Volume Analysis
 - Dark Mode TradingView Style
+- Websocket-client
 
 ## Install
 
@@ -23,3 +24,13 @@ pip install -r requirements.txt
 ```bash
 streamlit run app.py
 ```# ai_saham
+
+---Kalau disuruh memilih urutan upgrade terbaik:
+
+Websocket realtime
+AI screener IHSG
+Smart Money Concept PRO
+Deep Learning AI
+Backtesting engine
+Alert system
+Auto trading bot---# ai_saham
